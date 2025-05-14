@@ -30,17 +30,12 @@ class CustomEnvWrapper(Wrapper):
 
 def run(episodes, render):
 
-    env = gym.make('FrozenLake-v1', map_name="8x8", is_slippery=False, render_mode='human' if render else None, max_episode_steps=250)
+    env = gym.make('FrozenLake-v1', map_name="8x8", is_slippery=False, render_mode='human' if render else None, max_episode_steps=200)
     cenv = CustomEnvWrapper(env)
 
     f = open('frozen_lake8x8.pkl', 'rb')
     q = pickle.load(f)
     f.close()
-
-    for i in range(8):
-        for j in range(8):
-            print(f'state{i*8+j}: {q[i*8+j]}')
-    return 0
 
     rewards_per_episode = np.zeros(episodes)
 
@@ -67,7 +62,7 @@ def run(episodes, render):
 
 
 if __name__ == '__main__':
-    # run(1000, render=False)
+    run(1000, render=False)
 
-    run(1, render=True)
+    # run(1, render=True)
 

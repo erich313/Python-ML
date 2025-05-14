@@ -20,10 +20,10 @@ class CustomEnvWrapper(Wrapper):
     def step(self, action):       
         # Add some stochasticity
         rand = np.random.rand()
-        if rand < 1/3:
+        if rand < 0.1:
             # 10% chance to go the first perpendicular way
             action = self.perpandicular[action][0]
-        elif rand < 2/3:
+        elif rand < 0.2:
             # 10% chance to go the second perpendicular way
             action = self.perpandicular[action][1]
         else:
@@ -48,9 +48,34 @@ class CustomEnvWrapper(Wrapper):
 
         # Return obs(next_state), modified reward, terminated, truncated, and info
         return obs, reward, terminated, truncated, info
+    
+    def valid_action(self, state):
+        row, col = state // 8, state % 8
+        v = []
+        if col > 0: v.append(0)  # col=0, left is not valid
+        if row < 7: v.append(1)  # row=7, down is not valid 
+        if col < 7: v.append(2)  # col=7, right is not valid
+        if row > 0: v.append(3)  # row=0, up is not valid
+        return v
+    
+    def pre_validcheck(self, Q):
+        print("pre_validcheck started")
+        print(len(Q))
+        for state in range(64):
+            row, col = state // 8, state % 8
+            if row == 0:
+                Q[state][3] = -np.inf  # Can't go up
+            if row == 7:
+                Q[state][1] = -np.inf  # Can't go down
+            if col == 0:
+                Q[state][0] = -np.inf  # Can't go left
+            if col == 7:
+                Q[state][2] = -np.inf  # Can't go right
+        print("pre_validcheck finished")
+        return Q
 
 
-def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon = 1, epsilon_decay_rate=0.0001):
+def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon=1, epsilon_decay_rate=0.0001):
     # Q_Learning algorithm
     '''
     Args:
@@ -66,6 +91,10 @@ def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon = 1, epsilon_dec
 
     # Q_table: A dictionary that maps states to action values
     Q = defaultdict(lambda: np.zeros(env.action_space.n))  # action-value function
+    Q = env.pre_validcheck(Q)
+    for i in range(8):
+        for j in range(8):
+            print(f'state{i*8+j}: {Q[i*8+j]}')
 
     for episode in range(num_episodes):
         # Print progress every 100 episodes
@@ -80,7 +109,8 @@ def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon = 1, epsilon_dec
             rng = np.random.default_rng()  # random number generator
             if rng.random() < epsilon:
                 # actions: 0=left,1=down,2=right,3=up
-                action = env.action_space.sample()  # Exploration: choose a random action 
+                valid_actions = env.valid_action(state)
+                action = np.random.choice(valid_actions)  # Exploration: choose a random action 
             else:
                 action = np.argmax(Q[state])  # Exploitation: choose the best action
             next_state, reward, terminated, truncated, _ = env.step(action)
