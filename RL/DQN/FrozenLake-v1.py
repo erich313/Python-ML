@@ -15,8 +15,7 @@ class Agent:
     def __init__(self):
         self.replay_memory_size = 1000
         self.batch_size = 32
-        self.epsilon_init = 1
-        self.epsilon_decay = 0.999
+        self.epsilon_decay = 0.001
         self.epsilon_min = 0.05
         self.network_sync_rate = 10
         self.alpha = 0.001
@@ -24,7 +23,7 @@ class Agent:
         self.loss_fn = torch.nn.MSELoss()
         self.optimizer = None
 
-    def run(self, train, render, episodes=1000):
+    def run(self, training, render, episodes=1000):
         env = gym.make('FrozenLake-v1', map_name="4x4", is_slippery=False, render_mode=render)
 
         num_states = env.observation_space.n
@@ -52,28 +51,36 @@ class Agent:
         # Track number of steps taken. Used for syncing policy => target network.
         step_count=0
             
-        for i in range(episodes):
+        for episode in range(episodes):
             state = env.reset()[0]  # Initialize to state 0
+            state = F.one_hot(torch.tensor(state), num_classes=num_states).float()
+
             terminated = False      # True when agent falls in hole or reached goal
             truncated = False       # True when agent takes more than 200 actions    
 
             # Agent navigates map until it falls into hole/reaches goal (terminated), or has taken 200 actions (truncated).
-            while(not terminated and not truncated):
-
+            for t in itertools.count():
                 # Select action based on epsilon-greedy
                 if random.random() < epsilon:
                     # select random action
                     action = env.action_space.sample() # actions: 0=left,1=down,2=right,3=up
+                    action = torch.tensor(action, dtype=torch.int64)
                 else:
                     # select best action            
                     with torch.no_grad():
-                        action = policy_dqn(self.state_to_dqn_input(state, num_states)).argmax().item()
+                        action = policy_dqn(state.unsqueeze(dim=0)).squeeze().argmax()
 
                 # Execute action
-                new_state,reward,terminated,truncated,_ = env.step(action)
+                new_state,reward,terminated,truncated,_ = env.step(action.item())
+
+                new_state = F.one_hot(torch.tensor(new_state), num_classes=num_states).float()
+                reward = torch.tensor(reward, dtype=torch.float)
 
                 # Save experience into memory
-                memory.append((state, action, new_state, reward, terminated)) 
+                memory.append((state, action, new_state, reward, terminated, truncated)) 
+
+                if terminated or truncated:
+                    break
 
                 # Move to the next state
                 state = new_state
@@ -82,8 +89,8 @@ class Agent:
                 step_count+=1
 
             # Keep track of the rewards collected per episode.
-            if reward == 1:
-                rewards_per_episode[i] = 1
+            if reward.item() == 1.0:
+                rewards_per_episode[episode] = 1
 
             # Check if enough experience has been collected and if at least 1 reward has been collected
             if len(memory)>self.batch_size and np.sum(rewards_per_episode)>0:
@@ -91,7 +98,7 @@ class Agent:
                 self.optimize(batch, policy_dqn, target_dqn)        
 
                 # Decay epsilon
-                epsilon = max(epsilon - 1/episodes, 0)
+                epsilon = max(epsilon - self.epsilon_decay, self.epsilon_min)
                 epsilon_history.append(epsilon)
 
                 # Copy policy network to target network after a certain number of steps
@@ -123,49 +130,27 @@ class Agent:
         plt.savefig('frozen_lake_dql.png')
     
     def optimize(self, batch, policy_dqn, target_dqn):
-        # Get number of input nodes
-        num_states = policy_dqn.fc1.in_features
+        state, action, new_state, reward, terminated, truncated = zip(*batch)
 
-        current_q_list = []
-        target_q_list = []
+        state = torch.stack(state)
+        action = torch.stack(action)
+        new_state = torch.stack(new_state)
+        reward = torch.stack(reward)
+        terminated = torch.tensor(terminated).float()
+        truncated = torch.tensor(truncated).float()
 
-        for state, action, new_state, reward, terminated in batch:
+        with torch.no_grad():
+            targetQ = reward + (1-terminated) * (1-truncated) * self.gamma * target_dqn(new_state).max(dim=1)[0]
+        
+        currentQ = policy_dqn(state).gather(1, action.unsqueeze(dim=1)).squeeze()
 
-            if terminated: 
-                # Agent either reached goal (reward=1) or fell into hole (reward=0)
-                # When in a terminated state, target q value should be set to the reward.
-                target = torch.FloatTensor([reward])
-            else:
-                # Calculate target q value 
-                with torch.no_grad():
-                    target = torch.FloatTensor(
-                        reward + self.gamma * target_dqn(self.state_to_dqn_input(new_state, num_states)).max()
-                    )
+        loss = self.loss_fn(currentQ, targetQ)
 
-            # Get the current set of Q values
-            current_q = policy_dqn(self.state_to_dqn_input(state, num_states))
-            current_q_list.append(current_q)
-
-            # Get the target set of Q values
-            target_q = target_dqn(self.state_to_dqn_input(state, num_states)) 
-            # Adjust the specific action to the target that was just calculated
-            target_q[action] = target
-            target_q_list.append(target_q)
-                
-        # Compute loss for the whole minibatch
-        loss = self.loss_fn(torch.stack(current_q_list), torch.stack(target_q_list))
-
-        # Optimize the model
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
-    def state_to_dqn_input(self, state:int, num_states:int)->torch.Tensor:
-        input_tensor = torch.zeros(num_states)
-        input_tensor[state] = 1
-        return input_tensor
-
 
 if __name__ == "__main__":
     agent = Agent()
-    agent.run(train=True, render=None)
+    agent.run(training=True, render=None)
