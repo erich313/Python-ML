@@ -3,81 +3,97 @@ import torch
 import torch.nn.functional as F
 import itertools
 import random
-import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
+
 from dqn import DQN
 from experience_replay import ReplayMemory
+from dp import DataProcessor
 
-matplotlib.use('Agg')
 
 class Agent:
     def __init__(self):
-        self.replay_memory_size = 1000
-        self.batch_size = 32
-        self.epsilon_decay = 0.001
-        self.epsilon_min = 0.05
-        self.network_sync_rate = 10
+        # Q-learning parameters
         self.alpha = 0.001
         self.gamma = 0.9
+
+        # Epsilon-Greedy Algorithm parameters
+        self.epsilon_decay = 0.001
+        self.epsilon_min = 0.05
+
+        # Experience Replay parameters
+        self.replay_memory_size = 1000
+        self.batch_size = 32
+        self.network_sync_rate = 10
+
+        # Neural Network parasmeters
         self.loss_fn = torch.nn.MSELoss()
         self.optimizer = None
 
-    def run(self, training, render, episodes=1000):
-        env = gym.make('FrozenLake-v1', map_name="4x4", is_slippery=False, render_mode=render)
 
-        num_states = env.observation_space.n
-        num_actions = env.action_space.n
+    def run(self, training, render, episodes, slippery):
+        # Create environment
+        env = gym.make('FrozenLake-v1', map_name="4x4", render_mode=render, is_slippery=slippery)
 
-        epsilon = 1 # 1 = 100% random actions
-        memory = ReplayMemory(self.replay_memory_size)
+        num_states = env.observation_space.n  # observation space, for 4x4 map, 16 states(0-15), for 8x8 map, 64 states(0-63)
+        num_actions = env.action_space.n  # action space, 4 actions: 0=left,1=down,2=right,3=up
 
-        # Create policy and target network. Number of nodes in the hidden layer can be adjusted.
+        # Initialize DataProcessor
+        dp = DataProcessor(episodes)
+
+        # Create policy network
         policy_dqn = DQN(num_states, num_actions, num_states)
-        target_dqn = DQN(num_states, num_actions, num_states)
 
-        # Make the target and policy networks the same (copy weights/biases from one network to the other)
-        target_dqn.load_state_dict(policy_dqn.state_dict())
+        if training:
+            epsilon = 1 
 
-        # Policy network optimizer. "Adam" optimizer can be swapped to something else. 
-        self.optimizer = torch.optim.Adam(policy_dqn.parameters(), lr=self.alpha)
+            # Initialize Replay Memory
+            memory = ReplayMemory(self.replay_memory_size)
 
-        # List to keep track of rewards collected per episode. Initialize list to 0's.
-        rewards_per_episode = np.zeros(episodes)
+            # Create target network
+            target_dqn = DQN(num_states, num_actions, num_states)
 
-        # List to keep track of epsilon decay
-        epsilon_history = []
+            # Make the target and policy networks the same (copy weights/biases)
+            target_dqn.load_state_dict(policy_dqn.state_dict())
 
-        # Track number of steps taken. Used for syncing policy => target network.
-        step_count=0
+            # Initialize Policy network optimizer
+            self.optimizer = torch.optim.Adam(policy_dqn.parameters(), lr=self.alpha)
+
+            step_count=0
+        else:
+            # Load the trained model
+            policy_dqn.load_state_dict(torch.load("frozen_lake_dql.pt"))
+
+            # Switch the model to evaluation mode
+            policy_dqn.eval()
             
         for episode in range(episodes):
             state = env.reset()[0]  # Initialize to state 0
             state = F.one_hot(torch.tensor(state), num_classes=num_states).float()
 
             terminated = False      # True when agent falls in hole or reached goal
-            truncated = False       # True when agent takes more than 200 actions    
+            truncated = False       # True when agent takes more than 100 actions    
 
-            # Agent navigates map until it falls into hole/reaches goal (terminated), or has taken 200 actions (truncated).
             for t in itertools.count():
-                # Select action based on epsilon-greedy
-                if random.random() < epsilon:
+                # Select action based on epsilon-greedy algorithm
+                if training and random.random() < epsilon:
                     # select random action
-                    action = env.action_space.sample() # actions: 0=left,1=down,2=right,3=up
+                    action = env.action_space.sample() 
                     action = torch.tensor(action, dtype=torch.int64)
                 else:
                     # select best action            
                     with torch.no_grad():
                         action = policy_dqn(state.unsqueeze(dim=0)).squeeze().argmax()
 
-                # Execute action
+                # The agent take a step
                 new_state,reward,terminated,truncated,_ = env.step(action.item())
-
                 new_state = F.one_hot(torch.tensor(new_state), num_classes=num_states).float()
                 reward = torch.tensor(reward, dtype=torch.float)
 
-                # Save experience into memory
-                memory.append((state, action, new_state, reward, terminated, truncated)) 
+                if training:
+                    # Save experience into memory
+                    memory.append((state, action, new_state, reward, terminated, truncated)) 
+
+                    # Increment step counter
+                    step_count += 1
 
                 if terminated or truncated:
                     break
@@ -85,50 +101,38 @@ class Agent:
                 # Move to the next state
                 state = new_state
 
-                # Increment step counter
-                step_count+=1
-
-            # Keep track of the rewards collected per episode.
+            # Track rewards for graphing
             if reward.item() == 1.0:
-                rewards_per_episode[episode] = 1
+                dp.track_rewards(episode, 1)
 
-            # Check if enough experience has been collected and if at least 1 reward has been collected
-            if len(memory)>self.batch_size and np.sum(rewards_per_episode)>0:
-                batch = memory.sample(self.batch_size)
-                self.optimize(batch, policy_dqn, target_dqn)        
+            if training:
+                # Check if enough experience has been collected and if at least 1 reward has been collected
+                if len(memory)>self.batch_size and dp.sum_rewards()>0:
+                    batch = memory.sample(self.batch_size)
+                    self.optimize(batch, policy_dqn, target_dqn)        
 
-                # Decay epsilon
-                epsilon = max(epsilon - self.epsilon_decay, self.epsilon_min)
-                epsilon_history.append(epsilon)
+                    # Epsilon decay
+                    epsilon = max(epsilon - self.epsilon_decay, self.epsilon_min)
+                    
+                    # Track epsilon for graphing
+                    dp.track_epsilon(epsilon)
 
-                # Copy policy network to target network after a certain number of steps
-                if step_count > self.network_sync_rate:
-                    target_dqn.load_state_dict(policy_dqn.state_dict())
-                    step_count=0
+                    # Copy policy network to target network
+                    if step_count > self.network_sync_rate:
+                        target_dqn.load_state_dict(policy_dqn.state_dict())
+                        step_count=0
 
         # Close environment
         env.close()
 
-        # Save policy
-        torch.save(policy_dqn.state_dict(), "frozen_lake_dql.pt")
+        if training:
+            # Save policy
+            torch.save(policy_dqn.state_dict(), "frozen_lake_dql.pt")
 
-        # Create new graph 
-        plt.figure(1)
-
-        # Plot average rewards (Y-axis) vs episodes (X-axis)
-        sum_rewards = np.zeros(episodes)
-        for x in range(episodes):
-            sum_rewards[x] = np.sum(rewards_per_episode[max(0, x-100):(x+1)])
-        plt.subplot(121) # plot on a 1 row x 2 col grid, at cell 1
-        plt.plot(sum_rewards)
-        
-        # Plot epsilon decay (Y-axis) vs episodes (X-axis)
-        plt.subplot(122) # plot on a 1 row x 2 col grid, at cell 2
-        plt.plot(epsilon_history)
-        
-        # Save plots
-        plt.savefig('frozen_lake_dql.png')
+            # Generate a graph
+            dp.graphing()
     
+
     def optimize(self, batch, policy_dqn, target_dqn):
         state, action, new_state, reward, terminated, truncated = zip(*batch)
 
@@ -153,4 +157,5 @@ class Agent:
 
 if __name__ == "__main__":
     agent = Agent()
-    agent.run(training=True, render=None)
+    agent.run(training=True, render=None, episodes=1000, slippery=True)
+    agent.run(training=False, render="human", episodes=5, slippery=True)
