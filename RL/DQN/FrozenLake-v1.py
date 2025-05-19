@@ -7,6 +7,7 @@ import random
 from dqn import DQN
 from experience_replay import ReplayMemory
 from dp import DataProcessor
+from custom_env import CustomEnvWrapper
 
 
 class Agent:
@@ -16,13 +17,13 @@ class Agent:
         self.gamma = 0.9
 
         # Epsilon-Greedy Algorithm parameters
-        self.epsilon_decay = 0.001
-        self.epsilon_min = 0.05
+        self.epsilon_decay = 0.0001
+        self.epsilon_min = 0
 
         # Experience Replay parameters
-        self.replay_memory_size = 1000
-        self.batch_size = 32
-        self.network_sync_rate = 10
+        self.replay_memory_size = 5000
+        self.batch_size = 64
+        self.network_sync_rate = 500
 
         # Neural Network parasmeters
         self.loss_fn = torch.nn.MSELoss()
@@ -31,7 +32,8 @@ class Agent:
 
     def run(self, training, render, episodes, slippery):
         # Create environment
-        env = gym.make('FrozenLake-v1', map_name="4x4", render_mode=render, is_slippery=slippery)
+        original_env = gym.make('FrozenLake-v1', map_name="8x8", render_mode=render, is_slippery=None, max_episode_steps=100)
+        env = CustomEnvWrapper(original_env, slippery=slippery)
 
         num_states = env.observation_space.n  # observation space, for 4x4 map, 16 states(0-15), for 8x8 map, 64 states(0-63)
         num_actions = env.action_space.n  # action space, 4 actions: 0=left,1=down,2=right,3=up
@@ -40,7 +42,7 @@ class Agent:
         dp = DataProcessor(episodes)
 
         # Create policy network
-        policy_dqn = DQN(num_states, num_actions, num_states)
+        policy_dqn = DQN(num_states, num_actions, 128)
 
         if training:
             epsilon = 1 
@@ -49,7 +51,7 @@ class Agent:
             memory = ReplayMemory(self.replay_memory_size)
 
             # Create target network
-            target_dqn = DQN(num_states, num_actions, num_states)
+            target_dqn = DQN(num_states, num_actions, 128)
 
             # Make the target and policy networks the same (copy weights/biases)
             target_dqn.load_state_dict(policy_dqn.state_dict())
@@ -72,6 +74,7 @@ class Agent:
             terminated = False      # True when agent falls in hole or reached goal
             truncated = False       # True when agent takes more than 100 actions    
 
+            total_reward = 0
             for t in itertools.count():
                 # Select action based on epsilon-greedy algorithm
                 if training and random.random() < epsilon:
@@ -87,6 +90,7 @@ class Agent:
                 new_state,reward,terminated,truncated,_ = env.step(action.item())
                 new_state = F.one_hot(torch.tensor(new_state), num_classes=num_states).float()
                 reward = torch.tensor(reward, dtype=torch.float)
+                total_reward += reward.item()
 
                 if training:
                     # Save experience into memory
@@ -102,12 +106,11 @@ class Agent:
                 state = new_state
 
             # Track rewards for graphing
-            if reward.item() == 1.0:
-                dp.track_rewards(episode, 1)
+            dp.track_rewards(episode, total_reward)
 
             if training:
                 # Check if enough experience has been collected and if at least 1 reward has been collected
-                if len(memory)>self.batch_size and dp.sum_rewards()>0:
+                if len(memory)>self.batch_size:
                     batch = memory.sample(self.batch_size)
                     self.optimize(batch, policy_dqn, target_dqn)        
 
@@ -157,5 +160,5 @@ class Agent:
 
 if __name__ == "__main__":
     agent = Agent()
-    agent.run(training=True, render=None, episodes=1000, slippery=True)
-    agent.run(training=False, render="human", episodes=5, slippery=True)
+    agent.run(training=True, render=None, episodes=15000, slippery=True)
+    # agent.run(training=False, render="human", episodes=5, slippery=True)
