@@ -20,10 +20,10 @@ class CustomEnvWrapper(Wrapper):
     def step(self, action):       
         # Add some stochasticity
         rand = np.random.rand()
-        if rand <1/3:
+        if rand < 0.1:
             # 10% chance to go the first perpendicular way
             action = self.perpandicular[action][0]
-        elif rand < 2/3:
+        elif rand < 0.2:
             # 10% chance to go the second perpendicular way
             action = self.perpandicular[action][1]
         else:
@@ -74,7 +74,7 @@ def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon=1, epsilon_decay
 
         # Reset the environment and get the first state
         state  = env.reset()[0]
-
+        total_reward = 0
         for t in itertools.count():
             # Take a step
             rng = np.random.default_rng()  # random number generator
@@ -84,6 +84,7 @@ def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon=1, epsilon_decay
             else:
                 action = np.argmax(Q[state])  # Exploitation: choose the best action
             next_state, reward, terminated, truncated, _ = env.step(action)
+            total_reward += reward
             
             # Q-Learning update
             # Q(s,a) <- Q(s,a) + a * [r + gamma * max_a' Q(s',a') - Q(s,a))
@@ -110,7 +111,7 @@ def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon=1, epsilon_decay
         if(epsilon==0):
             alpha = 0.001
          
-        rewards_per_episode[episode] = reward
+        rewards_per_episode[episode] = total_reward
 
     env.close()
 
