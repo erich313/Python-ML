@@ -109,7 +109,7 @@ class Agent:
             dp.track_rewards(episode, total_reward)
 
             if training:
-                # Check if enough experience has been collected and if at least 1 reward has been collected
+                # Check if enough experience has been collected
                 if len(memory)>self.batch_size:
                     batch = memory.sample(self.batch_size)
                     self.optimize(batch, policy_dqn, target_dqn)        
@@ -160,5 +160,5 @@ class Agent:
 
 if __name__ == "__main__":
     agent = Agent()
-    agent.run(training=True, render=None, episodes=15000, slippery=True)
-    # agent.run(training=False, render="human", episodes=5, slippery=True)
+    # agent.run(training=True, render=None, episodes=15000, slippery=True)
+    agent.run(training=False, render="human", episodes=5, slippery=True)

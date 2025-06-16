@@ -50,7 +50,7 @@ class CustomEnvWrapper(Wrapper):
         return obs, reward, terminated, truncated, info
 
 
-def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon=1, epsilon_decay_rate=0.0001):
+def Q_Learning(env, num_episodes, alpha=0.5, gamma=0.9, epsilon=1, epsilon_decay_rate=0.0001):
     # Q_Learning algorithm
     '''
     Args:
@@ -95,17 +95,6 @@ def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon=1, epsilon_decay
             
             # Transition to the next state
             state = next_state
-
-        # min_epsilon = 0.0
-        # reward_threshold = -0.1
-        # reward_increment = 0.4
-        # reward_target = 180.0
-        # steps_to_take = reward_target / reward_increment
-        # epsilon_delta = (epsilon - min_epsilon) / steps_to_take
-
-        # if epsilon > min_epsilon and reward >= reward_threshold:
-        #     epsilon = max(epsilon - epsilon_delta, min_epsilon)
-        #     reward_threshold += reward_increment
 
         epsilon = max(epsilon - epsilon_decay_rate, 0)
         if(epsilon==0):

@@ -3,9 +3,9 @@ from gymnasium import Wrapper
 import numpy as np
 from collections import defaultdict
 import itertools
-import matplotlib.pyplot as plt
 import pickle
 
+from dp import DataProcessor
 
 class CustomEnvWrapper(Wrapper):
     def __init__(self, env):
@@ -15,49 +15,9 @@ class CustomEnvWrapper(Wrapper):
             1: [0, 2],  # remainder = 1: down/up -> left, right
         } 
     
-    # def set_state(self, state):
-        
-
     def step(self, action): 
         # Add some stochasticity
-        ''' Define the stochasticity
-
-        Original stochasticity:
-        General idea: 1/3 for intended action, 2/3 for perpendicular actions
-        case 1: 4 valid actions, 1/3 for intended action, 1/3 for one perpendicular action, 1/3 for the other perpendicular action
-        case 2: 3 valid actions, 1/3 for intended action, 2/3 for one perpendicular action
-        case 3: 2 valid actions, 1/3 for intended action, 2/3 for one other perpendicular action
-
-        Improved stochasticity:
-        General idea: 80% for intended action, 20% for perpendicular actions
-        case 1: 4 valid actions, 80% for intended action, 10% for one perpendicular action, 10% for the other perpendicular action
-        case 2: 3 valid actions, 80% for intended action, 20% for one perpendicular action
-        case 3: 2 valid actions, 80% for intended action, 20% for one other perpendicular action    
-        '''
-        '''
-        rand = np.random.rand()
-        intersection = list(set(valid_actions) & set(self.perpandicular[action%2]))
-        if len(intersection) == 2:
-            if rand < 1/3:
-                # 10% chance to go the first perpendicular way
-                action = self.perpandicular[action%2][0]
-            elif rand < 2/3:
-                # 10% chance to go the second perpendicular way
-                action = self.perpandicular[action%2][1]
-            else:
-                # 80% chance to go the original way
-                pass
-            
-        elif len(intersection) == 1:
-            if rand < 1/3:
-                # 20% chance to go the only valid perpendicular way
-                action = intersection[0]
-            else:
-                # 80% chance to go the original way
-                pass
-        else:
-            pass
-        '''
+        
         rand = np.random.rand()
         if rand < 0.1:
             # 10% chance to go the first perpendicular way
@@ -98,7 +58,7 @@ class CustomEnvWrapper(Wrapper):
         return v
 
 
-def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon=1, epsilon_decay_rate=0.0001):
+def Q_Learning(env, num_episodes, alpha=0.1, gamma=0.9, epsilon=1, epsilon_decay_rate=0.0001):
     # Q_Learning algorithm
     '''
     Args:
@@ -110,28 +70,21 @@ def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon=1, epsilon_decay
         epsilon_decay_rate: use decay to balance exploration early and exploitation later
     '''
 
-    rewards_per_episode = np.zeros(num_episodes)
+    dp = DataProcessor(num_episodes)
 
     # Q_table: A dictionary that maps states to action values
     Q = defaultdict(lambda: np.zeros(env.action_space.n))  # action-value function
+    action_taken = defaultdict(lambda: np.zeros(env.action_space.n))
+    monitor_state = [[0], [0], [0], [0]]
+    monitor_state_number = 62
 
     for episode in range(num_episodes):
         # Print progress every 100 episodes
         if (episode+1) % 100 == 0:
             print(f"Progress: Episode {episode+1}/{num_episodes}")
-        state = env.reset()[0] 
-        # statearray = []
-        # control = 5 - (episode//2000)
-        # if control >= 0:
-        #     for i in range(control, 8):
-        #         for j in range(control, 8):
-        #             if custom_map[i][j] == "F" or custom_map[i][j] == "S":
-        #                 statearray.append(8*i+j)  
-        #     state = np.random.choice(statearray)  # choose a random state from the valid states 
-        # else:
-        #     # Reset the environment and get the first state
-        #     state = env.reset()[0]        
+        state = env.reset()[0]       
 
+        total_reward = 0
         for t in itertools.count():
             valid_actions = env.valid_action(state)
             # Take a step
@@ -145,31 +98,43 @@ def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon=1, epsilon_decay
                 action = np.argmax([Q[state][i] if i in valid_actions else -np.inf for i in range(4)])  # Exploitation: choose the best action
     
             next_state, reward, terminated, truncated, _ = env.step(action)
+            total_reward += reward
             # Q-Learning update
             # Q(s,a) <- Q(s,a) + a * [r + gamma * max_a' Q(s',a') - Q(s,a))
             # best_next_action = np.argmax(Q[next_state])
             valid_next_actions = env.valid_action(next_state)
             best_next_action = np.argmax([Q[next_state][i] if i in valid_next_actions else -np.inf for i in range(4)])
+            action_taken[state][action] += 1
             Q[state][action] = Q[state][action] + alpha * (reward + gamma * Q[next_state][best_next_action] - Q[state][action])
+            if state == monitor_state_number:
+                monitor_state[action].append(Q[state][action])
+                for i in [x for x in [0,1,2,3] if x != action]:  
+                    monitor_state[i].append(monitor_state[i][-1])
             if terminated or truncated:
                 break
             
             # Transition to the next state
             state = next_state
+        
 
+        # if terminated and next_state == 63:
+        #     epsilon = max(epsilon - epsilon_decay_rate, 0)
         epsilon = max(epsilon - epsilon_decay_rate, 0)
+        dp.track_epsilon(epsilon)
         if(epsilon==0):
             alpha = 0.001
          
-        rewards_per_episode[episode] = reward
+        dp.track_rewards(episode, total_reward)
 
     env.close()
 
-    sum_rewards = np.zeros(num_episodes)
-    for t in range(num_episodes):
-        sum_rewards[t] = np.sum(rewards_per_episode[max(0, t-100):(t+1)])
-    plt.plot(sum_rewards)
-    plt.savefig('reward_per_hundred_episodes.png')
+    dp.graphing()
+    dp.graphing_visited(action_taken)
+    dp.graphing_monitor(monitor_state, monitor_state_number)
+
+    # for i in range(8):
+    #     for j in range(8):
+    #         print(f'state{i*8+j}: {action_taken[i*8+j]}')
 
     q = np.zeros((env.observation_space.n, env.action_space.n))
     for state, actions in Q.items():
@@ -182,16 +147,6 @@ def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon=1, epsilon_decay
 
 
 if __name__ == "__main__":
-    custom_map=[
-        "FFFFFFFF",
-        "FFFFFFFF",
-        "FFFHFFFF",
-        "FFFFFHFF",
-        "FFFHSFFF",
-        "FHHFFFHF",
-        "FHFFHFHF",
-        "FFFHFFFG"
-    ]
-    env = gym.make('FrozenLake-v1', map_name="8x8", is_slippery=False, render_mode=None, max_episode_steps=200, desc=custom_map)
+    env = gym.make('FrozenLake-v1', map_name="8x8", is_slippery=False, render_mode=None, max_episode_steps=200)
     cenv = CustomEnvWrapper(env)
     Q = Q_Learning(cenv, num_episodes=15000)
