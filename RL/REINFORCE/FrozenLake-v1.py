@@ -19,7 +19,7 @@ class Agent:
 
     def run(self, render, episodes, slippery):
         # Create environment
-        original_env = gym.make('FrozenLake-v1', map_name="8x8", render_mode=render, is_slippery=None, max_episode_steps=200)
+        original_env = gym.make('FrozenLake-v1', map_name="4x4", render_mode=render, is_slippery=None, max_episode_steps=200)
         env = CustomEnvWrapper(original_env, slippery=slippery)
 
         num_states = env.observation_space.n  # observation space, for 4x4 map, 16 states(0-15), for 8x8 map, 64 states(0-63)
