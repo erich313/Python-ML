@@ -5,7 +5,7 @@ import itertools
 import random
 
 from algo import REINFORCE
-from pn import PolicyNet
+from net import PolicyNet
 from custom_env import CustomEnvWrapper
 from dp import DataProcessor
 

@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-from pn import PolicyNet
+from net import PolicyNet
 
 class REINFORCE:
     def __init__(self, state_dim, hidden_dim, action_dim, learning_rate, gamma):
