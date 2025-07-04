@@ -87,6 +87,8 @@ class Agent:
         # Switch the model to evaluation mode
         policynet.eval()
 
+        success = []
+
         for episode in range(episodes):
             state = env.reset()[0]  # Initialize to state 0
             state = F.one_hot(torch.tensor(state), num_classes=num_states).float().unsqueeze(dim=0)
@@ -94,26 +96,48 @@ class Agent:
             terminated = False      # True when agent falls in hole or reached goal
             truncated = False       # True when agent takes more than 100 actions    
 
-            total_reward = 0
             for t in itertools.count():
                 with torch.no_grad():
                     action = policynet(state).squeeze().argmax()
 
                 # The agent take a step
-                new_state,reward,terminated,truncated,_ = env.step(action.item())
-                new_state = F.one_hot(torch.tensor(new_state), num_classes=num_states).float().unsqueeze(dim=0)
-                total_reward += reward
+                new_state, reward, terminated, truncated,_ = env.step(action.item())
 
                 if terminated or truncated:
+                    if new_state == 63:
+                        success.append(1)
+                    else:
+                        success.append(0)
                     break
 
+                new_state = F.one_hot(torch.tensor(new_state), num_classes=num_states).float().unsqueeze(dim=0)
                 state = new_state
+
 
         # Close environment
         env.close()
 
+        print(f"Success rate over {episodes} episodes: {100 * sum(success) / len(success)} %")
+    
+    def load(self):
+        num_states = 64
+        num_actions = 4
+        policynet = PolicyNet(num_states, num_actions, 128)
+        policynet.load_state_dict(torch.load("frozen_lake_actor-critic.pt"))
+
+        # Switch the model to evaluation mode
+        policynet.eval()
+
+        for i in range(num_states):
+            state = F.one_hot(torch.tensor(i), num_classes=num_states).float().unsqueeze(dim=0)
+            with torch.no_grad():
+                action = policynet(state).squeeze()
+            print(f"State {i} -> Action {action}")
+
+
 
 if __name__ == "__main__":
     agent = Agent()
-    # agent.run(render=None, episodes=2500, slippery=True)
-    agent.test(render="human", episodes=5, slippery=True)
+    agent.run(render=None, episodes=2500, slippery=True)
+    # agent.test(render="human", episodes=5, slippery=True)
+    # agent.load()
