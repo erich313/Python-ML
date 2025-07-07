@@ -2,7 +2,7 @@ from torch import nn
 import torch.nn.functional as F
 
 
-class PolicyNet(nn.Module):
+class ActorNet(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_dim):
         super().__init__()
         self.fc1 = nn.Linear(state_dim, hidden_dim)
@@ -13,7 +13,7 @@ class PolicyNet(nn.Module):
         return F.softmax(self.fc2(x), dim=1)
 
 
-class ValueNet(nn.Module):
+class CriticNet(nn.Module):
     def __init__(self, state_dim, hidden_dim):
         super().__init__()
         self.fc1 = nn.Linear(state_dim, hidden_dim)

@@ -21,6 +21,10 @@ class DataProcessor:
         # Create new graph 
         plt.figure(1)
 
+        plt.title("Rewards per last 100 episodes")
+        plt.xlabel("Episodes")
+        plt.ylabel("Rewards")
+
         # Plot average rewards (Y-axis) vs episodes (X-axis)
         sum_rewards = np.zeros(self.episodes)
         for x in range(self.episodes):

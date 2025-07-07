@@ -15,7 +15,7 @@ class CustomEnvWrapper(Wrapper):
 
     def step(self, action):    
         if self.slippery:   
-            # Add some stochasticity
+            # Add stochasticity
             rand = np.random.rand()
             if rand < 0.1:
                 # 10% chance to go the first perpendicular way
@@ -40,11 +40,11 @@ class CustomEnvWrapper(Wrapper):
         tile = desc[row][col].decode("utf-8")
 
         if tile == "H":
-            reward = -10
+            reward = -1
         elif tile == "G":
-            reward = 20
+            reward = 2
         else:
-            reward = -0.1
+            reward = -0.01
 
         # Return obs(next_state), modified reward, terminated, truncated, and info
         return obs, reward, terminated, truncated, info

@@ -1,14 +1,14 @@
 import torch
 import torch.nn.functional as F
 
-from net import PolicyNet, ValueNet
+from net import ActorNet, CriticNet
 
 
 class ActorCritic:
     def __init__(self, state_dim, hidden_dim, action_dim, lr_actor, lr_critic, gamma, device):
         # networks
-        self.actor = PolicyNet(state_dim, action_dim, hidden_dim).to(device)
-        self.critic = ValueNet(state_dim, hidden_dim).to(device)
+        self.actor = ActorNet(state_dim, action_dim, hidden_dim).to(device)
+        self.critic = CriticNet(state_dim, hidden_dim).to(device)
 
         # optimizers
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr_actor)
