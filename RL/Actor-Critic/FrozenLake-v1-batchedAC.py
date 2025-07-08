@@ -200,5 +200,5 @@ if __name__ == "__main__":
     agent = Agent()
     # agent.train(render=None, episodes=5000, slippery=True, max_episode_steps=200)
     # agent.run(render='human', episodes=5, slippery=True, max_episode_steps=200)
-    agent.run(render=None, episodes=1000, slippery=True, max_episode_steps=200)
+    # agent.run(render=None, episodes=1000, slippery=True, max_episode_steps=200)
     # agent.load()
