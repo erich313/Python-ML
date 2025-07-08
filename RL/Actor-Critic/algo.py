@@ -49,7 +49,8 @@ class ActorCritic:
         self.actor_optimizer.step()
         self.critic_optimizer.step()
     
-    '''# classic update method for actor-critic algorithm
+    '''
+    # classic update method for actor-critic algorithm
     def update(self, transition, num_states):
         state, action, reward, next_state, end = transition
         states = F.one_hot(torch.tensor(state), num_classes=num_states).float().unsqueeze(0).to(self.device)
@@ -70,5 +71,5 @@ class ActorCritic:
         actor_loss.backward() 
         critic_loss.backward() 
         self.actor_optimizer.step() 
-        self.critic_optimizer.step()'''
-
+        self.critic_optimizer.step()
+    '''

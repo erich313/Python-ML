@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from algo import ActorCritic
 from custom_env import CustomEnvWrapper
-from dp import DataProcessor  
+from data import DataProcessor  
 from net import ActorNet, CriticNet
 
 
@@ -35,7 +35,7 @@ class Agent:
         num_actions = env.action_space.n  # action space, 4 actions: 0=left,1=down,2=right,3=up
 
         # Initialize DataProcessor
-        dp = DataProcessor(episodes)
+        data = DataProcessor(episodes)
 
         # Initialize Actor-Critic model
         actorcritic = ActorCritic(num_states, 128, num_actions, self.lr_actor, self.lr_critic, self.gamma, self.device)
@@ -83,7 +83,7 @@ class Agent:
             actorcritic.update(transition_dict, num_states)
 
             # Track rewards for each episode to graphing
-            dp.track_rewards(episode, total_reward)
+            data.track_rewards(episode, total_reward)
 
         # Close environment
         env.close()
@@ -93,7 +93,7 @@ class Agent:
         torch.save(actorcritic.critic.state_dict(), "frozen_lake_critic.pt")
 
         # Graphing the reward per last 100 episodes
-        dp.graphing()
+        data.graphing()
 
 
     def run(self, render, episodes, slippery, max_episode_steps):
@@ -198,7 +198,7 @@ class Agent:
 
 if __name__ == "__main__":
     agent = Agent()
-    agent.train(render=None, episodes=5000, slippery=True, max_episode_steps=200)
+    # agent.train(render=None, episodes=5000, slippery=True, max_episode_steps=200)
     # agent.run(render='human', episodes=5, slippery=True, max_episode_steps=200)
-    # agent.run(render=None, episodes=1000, slippery=True, max_episode_steps=200)
+    agent.run(render=None, episodes=1000, slippery=True, max_episode_steps=200)
     # agent.load()
