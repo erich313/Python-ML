@@ -50,7 +50,7 @@ class CustomEnvWrapper(Wrapper):
         return obs, reward, terminated, truncated, info
 
 
-def Q_Learning(env, num_episodes, alpha=0.5, gamma=0.9, epsilon=1, epsilon_decay_rate=0.0001):
+def Q_Learning(env, num_episodes, alpha=0.9, gamma=0.9, epsilon=1, epsilon_decay_rate=0.0001):
     # Q_Learning algorithm
     '''
     Args:
