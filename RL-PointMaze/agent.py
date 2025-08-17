@@ -50,10 +50,7 @@ class Agent(object):
     def select_action(self, state, evaluate=False):
         state = torch.FloatTensor(state).to(self.device).unsqueeze(0)
         
-        if evaluate is False:
-            action, _, _ = self.actor.sample(state)
-        else:
-            _, _, action = self.actor.sample(state)
+        action, _, _ = self.actor.sample(state)
 
         return action.detach().cpu().numpy()[0]
 
@@ -199,6 +196,7 @@ class Agent(object):
         self.actor.save_checkpoint()
         self.critic.save_checkpoint()
         self.critic_target.save_checkpoint()
+        self.icm.save_checkpoint()
 
 
     def load_checkpoint(self, evaluate=False):
@@ -207,6 +205,7 @@ class Agent(object):
             self.actor.load_checkpoint()
             self.critic.load_checkpoint()
             self.critic_target.load_checkpoint()
+            self.icm.load_checkpoint()
             print("Checkpoints loaded successfully.")
         except:
             if evaluate:
@@ -218,7 +217,9 @@ class Agent(object):
             self.actor.eval()
             self.critic.eval()
             self.critic_target.eval()
+            self.icm.eval()
         else:
             self.actor.train()
             self.critic.train()
             self.critic_target.train()
+            self.icm.train()
