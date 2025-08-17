@@ -12,7 +12,7 @@
     max_episode_steps = 100
     exploration_scaling_factor = 1.5
 
-20250817-081250-straight_maze
+20250817-084652-straight_maze
     replay_buffer_size = 1000000
     episodes = 500
     batch_size = 64

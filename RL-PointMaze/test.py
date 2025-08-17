@@ -9,7 +9,7 @@ from agent import Agent
 if __name__ == "__main__":
 
     replay_buffer_size = 1000000
-    episodes = 1000
+    episodes = 10
     batch_size = 64
     update_per_state = 4
     gamma = 0.99
@@ -46,6 +46,6 @@ if __name__ == "__main__":
 
     agent.load_checkpoint(evaluate=True)
 
-    agent.test(env, episodes=10, max_episode_steps=max_episode_steps)
+    agent.test(env, episodes=episodes, max_episode_steps=max_episode_steps)
 
     env.close()
