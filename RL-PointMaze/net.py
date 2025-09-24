@@ -43,8 +43,8 @@ class CriticNet(nn.Module):
         x1 = F.relu(self.fc2(x1))
         x1 = self.fc3(x1)
 
-        x2 = F.relu(self.fc1(x))
-        x2 = F.relu(self.fc2(x2))
+        x2 = F.relu(self.fc4(x))
+        x2 = F.relu(self.fc5(x2))
         x2 = self.fc6(x2)
 
         return x1, x2
