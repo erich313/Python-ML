@@ -190,7 +190,7 @@ class Agent:
         criticnet.load_state_dict(torch.load("frozen_lake_critic.pt"))
 
         # Switch the model to evaluation mode
-        policynet.eval()
+        criticnet.eval()
 
         for i in range(num_states):
             state = F.one_hot(torch.tensor(i), num_classes=num_states).float().unsqueeze(dim=0)
