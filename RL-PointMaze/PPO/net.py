@@ -19,15 +19,9 @@ class CriticNet(nn.Module):
     def __init__(self, state_dim, action_dim, hidden_dim, checkpoint_dir='checkpoints', name='CriticNetwork'):
         super(CriticNet, self).__init__()
 
-        # Critic1
-        self.fc1 = nn.Linear(state_dim + action_dim, hidden_dim)
+        self.fc1 = nn.Linear(state_dim , hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, hidden_dim)
         self.fc3 = nn.Linear(hidden_dim, 1)
-
-        # Critic2
-        self.fc4 = nn.Linear(state_dim + action_dim, hidden_dim)
-        self.fc5 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc6 = nn.Linear(hidden_dim, 1)
 
         self.name = name
         self.checkpoint_dir = checkpoint_dir
@@ -36,18 +30,12 @@ class CriticNet(nn.Module):
         self.apply(weights_init_)
     
 
-    def forward(self, state, action):
-        x = torch.cat([state, action], 1)
+    def forward(self, state):
+        x = F.relu(self.fc1(state))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
 
-        x1 = F.relu(self.fc1(x))
-        x1 = F.relu(self.fc2(x1))
-        x1 = self.fc3(x1)
-
-        x2 = F.relu(self.fc4(x))
-        x2 = F.relu(self.fc5(x2))
-        x2 = self.fc6(x2)
-
-        return x1, x2
+        return x
     
 
     def save_checkpoint(self):
@@ -95,7 +83,7 @@ class ActorNet(nn.Module):
         mean, log_std = self.forward(state)
         std = log_std.exp()
         normal = Normal(mean, std)
-        x_t = normal.rsample()
+        x_t = normal.sample()
         y_t = torch.tanh(x_t)
         action = y_t * self.action_scale + self.action_bias
         log_prob = normal.log_prob(x_t) - torch.log(self.action_scale * (1 - y_t.pow(2)) + EPSILON)
@@ -118,30 +106,4 @@ class ActorNet(nn.Module):
         self.load_state_dict(torch.load(self.checkpoint_file))
 
 
-class ICMNet(nn.Module):
-    def __init__(self, state_dim, action_dim, hidden_dim, checkpoint_dir='checkpoints', name='ICMNetwork'):
-        super(ICMNet, self).__init__()
 
-        self.fc1 = nn.Linear(state_dim + action_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = nn.Linear(hidden_dim, state_dim)
-
-        self.checkpoint_dir = checkpoint_dir
-        self.name = name
-        self.checkpoint_file = os.path.join(self.checkpoint_dir, self.name)
-
-
-    def forward(self, state, action):
-        x = torch.cat([state, action], dim=1)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        predictived_state = self.fc3(x)
-        return predictived_state
-    
-
-    def save_checkpoint(self):
-        torch.save(self.state_dict(), self.checkpoint_file)
-
-
-    def load_checkpoint(self):
-        self.load_state_dict(torch.load(self.checkpoint_file))

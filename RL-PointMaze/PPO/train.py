@@ -5,23 +5,18 @@ import numpy as np
 from wrapper import DataWrapper
 from net import *
 from agent import Agent
-from buffer import ReplayBuffer
 
 
 if __name__ == "__main__":
-
-    replay_buffer_size = 1000000
-    episodes = 500
-    batch_size = 64
-    update_per_state = 4
+    episodes = 1000
     gamma = 0.99
     tau = 0.005
-    alpha = 0.1
-    target_update_interval = 1
+    lambdaa = 0.95
+    epsilon = 0.2
+    epochs = 10
     hidden_dim = 512
-    learning_rate = 1e-4
+    learning_rate = 2e-6
     max_episode_steps = 100
-    exploration_scaling_factor = 1.5
 
     STRAIGHT_MAZE = [[1, 1, 1, 1, 1],
                      [1, 0, 0, 0, 1],
@@ -39,20 +34,15 @@ if __name__ == "__main__":
     agent = Agent(state_dim=observation_dim, 
                   action_space=env.action_space,
                   hidden_dim=hidden_dim,
-                  gamma=gamma,
-                  tau=tau,
-                  alpha=alpha,
-                  target_update_interval=target_update_interval,
                   learning_rate=learning_rate,
-                  exploration_scaling_factor=exploration_scaling_factor)
+                  gamma=gamma,
+                  lambdaa=lambdaa,
+                  epsilon=epsilon,
+                  epochs=epochs)
 
-    memory = ReplayBuffer(max_size=replay_buffer_size, state_dim=observation_dim, action_dim=action_dim)
 
     agent.train(env,
-                memory=memory,
                 episodes=episodes,
-                batch_size=batch_size,
-                updates_per_step=update_per_state,
                 summary_writer_name=f'straight_maze',
                 max_episode_steps=max_episode_steps)
 
