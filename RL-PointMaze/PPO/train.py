@@ -5,18 +5,22 @@ import numpy as np
 from wrapper import DataWrapper
 from net import *
 from agent import Agent
+from buffer import *
 
 
 if __name__ == "__main__":
-    episodes = 1000
+    episodes = 5000
     gamma = 0.99
-    tau = 0.005
     lambdaa = 0.95
     epsilon = 0.2
-    epochs = 10
+    entropy_coef = 0.02
+    epochs = 4
     hidden_dim = 512
-    learning_rate = 2e-6
+    learning_rate_ac = 1e-4
+    learning_rate_cr = 3e-4
     max_episode_steps = 100
+    batch_size = 1024
+    mini_batch_size = 256
 
     STRAIGHT_MAZE = [[1, 1, 1, 1, 1],
                      [1, 0, 0, 0, 1],
@@ -34,17 +38,24 @@ if __name__ == "__main__":
     agent = Agent(state_dim=observation_dim, 
                   action_space=env.action_space,
                   hidden_dim=hidden_dim,
-                  learning_rate=learning_rate,
+                  learning_rate_ac=learning_rate_ac,
+                  learning_rate_cr=learning_rate_cr,
                   gamma=gamma,
                   lambdaa=lambdaa,
                   epsilon=epsilon,
+                  entropy_coef=entropy_coef,
                   epochs=epochs)
-
+    
+    buffer = RolloutBuffer(batch_size=batch_size,
+                           mini_batch_size=mini_batch_size,
+                           state_dim=observation_dim,
+                           action_dim=action_dim)
 
     agent.train(env,
                 episodes=episodes,
                 summary_writer_name=f'straight_maze',
-                max_episode_steps=max_episode_steps)
+                max_episode_steps=max_episode_steps,
+                buffer=buffer)
 
     env.close()
     

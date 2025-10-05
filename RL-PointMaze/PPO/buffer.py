@@ -1,48 +1,32 @@
-import numpy as np
+import torch
 
 
-class ReplayBuffer():
+class RolloutBuffer:
+    def __init__(self, batch_size, mini_batch_size, state_dim, action_dim, device='cuda' if torch.cuda.is_available() else 'cpu'):
+        self.batch_size = batch_size
+        self.device = device
+        self.idx = 0
+        self.current_size = 0
+        self.mini_batch_size = mini_batch_size
 
-    def __init__(self, max_size, state_dim, action_dim):
-        self.mem_size = max_size
-        self.mem_counter = 0
-        self.state_memory = np.zeros((self.mem_size, state_dim))
-        self.next_state_memory = np.zeros((self.mem_size, state_dim))
-        self.action_memory = np.zeros((self.mem_size, action_dim))
-        self.reward_memory = np.zeros(self.mem_size)
-        self.terminated_memory = np.zeros(self.mem_size, dtype=np.bool)
-        self.truncated_memory = np.zeros(self.mem_size, dtype=np.bool)
-        
+        self.states = torch.zeros((batch_size, state_dim), dtype=torch.float32, device=device)
+        self.actions = torch.zeros((batch_size, action_dim), dtype=torch.float32, device=device)
+        self.rewards = torch.zeros((batch_size, 1), dtype=torch.float32, device=device)
+        self.terminateds = torch.zeros((batch_size, 1), dtype=torch.float32, device=device)
 
-    def can_smaple(self, batch_size):
-        if self.mem_counter > (batch_size*5):
-            return True
-        else:
-            return False
-        
-    
-    def store_transition(self, state, next_state, action, reward, terminated, truncated):
-        index = self.mem_counter % self.mem_size
-        self.state_memory[index] = state
-        self.next_state_memory[index] = next_state
-        self.action_memory[index] = action
-        self.reward_memory[index] = reward
-        self.terminated_memory[index] = terminated
-        self.truncated_memory[index] = truncated
+    def store(self, state, action, reward, terminated):
+        self.states[self.idx] = torch.tensor(state, dtype=torch.float32, device=self.device)
+        self.actions[self.idx] = torch.tensor(action, dtype=torch.float32, device=self.device)
+        self.rewards[self.idx] = torch.tensor([reward], dtype=torch.float32, device=self.device)
+        self.terminateds[self.idx] = torch.tensor([terminated], dtype=torch.float32, device=self.device)
 
-        self.mem_counter += 1
+        self.idx = (self.idx + 1) % self.batch_size
+        self.current_size = min(self.current_size + 1, self.batch_size)
 
-
-    def sample_buffer(self, batch_size):
-        max_mem = min(self.mem_counter, self.mem_size)
-        batch = np.random.choice(max_mem, batch_size)
-
-        states = self.state_memory[batch]
-        next_states = self.next_state_memory[batch]
-        actions = self.action_memory[batch]
-        rewards = self.reward_memory[batch]
-        terminateds = self.terminated_memory[batch]
-        truncateds = self.truncated_memory[batch]
-
-        return states, next_states, actions, rewards, terminateds, truncateds
-    
+    def clear(self):
+        self.idx = 0
+        self.current_size = 0
+        self.states.zero_()
+        self.actions.zero_()
+        self.rewards.zero_()
+        self.terminateds.zero_()
