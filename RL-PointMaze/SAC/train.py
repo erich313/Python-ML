@@ -11,7 +11,7 @@ from buffer import ReplayBuffer
 if __name__ == "__main__":
 
     replay_buffer_size = 1000000
-    episodes = 500
+    episodes = 4000
     batch_size = 64
     update_per_state = 4
     gamma = 0.99
@@ -20,15 +20,27 @@ if __name__ == "__main__":
     target_update_interval = 1
     hidden_dim = 512
     learning_rate = 1e-4
-    max_episode_steps = 100
+    max_episode_steps = 500
     exploration_scaling_factor = 1.5
 
     STRAIGHT_MAZE = [[1, 1, 1, 1, 1],
                      [1, 0, 0, 0, 1],
                      [1, 1, 1, 1, 1]]
     
+    LARGE_MAZE = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                  [1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+                  [1, 1, 1, 0, 1, 0, 1, 1, 0, 1],
+                  [1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+                  [1, 0, 1, 1, 1, 0, 1, 0, 1, 1],
+                  [1, 0, 1, 0, 0, 0, 1, 0, 0, 1],
+                  [1, 0, 1, 0, 1, 1, 1, 1, 0, 1],
+                  [1, 0, 0, 0, 0, 0, 0, 1, 0, 1],
+                  [1, 1, 1, 1, 1, 1, 0, 1, 0, 1],
+                  [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
+
+    
     gym.register_envs(gymnasium_robotics)
-    env = gym.make('PointMaze_UMaze-v3', max_episode_steps=max_episode_steps, render_mode='human', maze_map=STRAIGHT_MAZE)
+    env = gym.make('PointMaze_UMaze-v3', max_episode_steps=max_episode_steps, render_mode='human', maze_map=LARGE_MAZE)
     env = DataWrapper(env)
 
     observation, info = env.reset()
