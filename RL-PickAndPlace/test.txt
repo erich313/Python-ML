@@ -1,0 +1,22 @@
+1. Simulation Time Step (dt): MuJoCo's physics engine operates at a fixed, small time step. Simulation frequency is 1/dt.
+2. Control Frequency: The control frequency, or policy update frequency, is often lower than the simulation frequency. 
+   This means that a control action might be applied for multiple simulation steps before a new action is computed.
+3. Action Persistence: How many simulation steps a single control action persists before a new one is applied. 
+   If the simulation time step is dt and an action persists for k steps, the control frequency is 1 / (k * dt).
+
+
+In PointMaze_UMaze-v3 env:
+control frequency is specified as f = 10Hz in Gymnasium-Robotics Documentation by default.  
+dt is determined by env.unwrapped.model.opt.timestep parameter, which is 0.01.  [flexible]
+k = 10 can be inferred.  [fixed]
+
+1 / (k * dt) = 1 / (10 * 0.01) = 1 / 0.1 = 10 = control frequency (checked!)
+
+
+In FetchPickAndPlaceDense-v4 env:
+control frequency is specified as f = 25Hz in Gymnasium-Robotics Documentation by default.
+dt is determined by env.unwrapped.model.opt.timestep parameter, which is 0.002.  [flexible]
+k = 20 is stated in Gymnasium-Robotics Documentation.  [fixed]
+
+(k * dt) = (20 * 0.002) = 0.04 = env.unwrapped.dt
+1 / (k * dt) = 1 / 0.04 = 25 = control frequency (checked!)
