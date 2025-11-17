@@ -49,9 +49,12 @@ class Agent(object):
     
     def select_action(self, state, evaluate=False):
         state = torch.FloatTensor(state).to(self.device).unsqueeze(0)
-        
-        action, _, _ = self.actor.sample(state)
 
+        if evaluate is False:
+            action, _, _ = self.actor.sample(state)
+        else:
+            _, _, action = self.actor.sample(state)
+        
         return action.detach().cpu().numpy()[0]
 
 
@@ -133,7 +136,7 @@ class Agent(object):
                 if warm_up > episode:
                     action = env.action_space.sample()
                 else:
-                    action = self.select_action(state)
+                    action = self.select_action(state, evaluate=False)
 
                 if memory.can_smaple(batch_size=batch_size):
                     for _ in range(updates_per_step):
@@ -173,7 +176,7 @@ class Agent(object):
             state, _ = env.reset()
 
             while not terminated and episode_steps < max_episode_steps:
-                action = self.select_action(state)
+                action = self.select_action(state, evaluate=True)
                 next_state, reward, terminated, truncated, _ = env.step(action)
 
                 episode_steps += 1

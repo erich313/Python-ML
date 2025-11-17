@@ -10,24 +10,24 @@ from buffer import *
 
 if __name__ == "__main__":
     episodes = 5000
-    gamma = 0.99
-    lambdaa = 0.95
-    epsilon = 0.2
-    entropy_coef = 0.02
-    epochs = 4
+    gamma = 0.982
+    lambdaa = 0.958
+    epsilon = 0.12
+    entropy_coef = 0.06
+    epochs = 10
     hidden_dim = 512
-    learning_rate_ac = 1e-4
-    learning_rate_cr = 3e-4
+    learning_rate_ac = 2e-4
+    learning_rate_cr = 9e-4
     max_episode_steps = 100
-    batch_size = 1024
-    mini_batch_size = 256
+    batch_size = 4096
+    mini_batch_size = 512
 
     STRAIGHT_MAZE = [[1, 1, 1, 1, 1],
                      [1, 0, 0, 0, 1],
                      [1, 1, 1, 1, 1]]
     
     gym.register_envs(gymnasium_robotics)
-    env = gym.make('PointMaze_UMaze-v3', max_episode_steps=max_episode_steps, render_mode='human', maze_map=STRAIGHT_MAZE)
+    env = gym.make('PointMaze_UMaze-v3', max_episode_steps=max_episode_steps,  maze_map=STRAIGHT_MAZE)
     env = DataWrapper(env)
 
     observation, info = env.reset()
