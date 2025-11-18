@@ -4,8 +4,8 @@ from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
 import os
 from datetime import datetime
-import numpy as np  # <-- ADDED
-import optuna     # <-- ADDED
+import numpy as np 
+import optuna 
 
 from net import *
 from trick import *
@@ -14,7 +14,6 @@ from buffer import *
 
 class Agent(object):
     def __init__(self, state_dim, action_space, hidden_dim, learning_rate_ac, learning_rate_cr, gamma, lambdaa, epsilon, entropy_coef, epochs):
-        # ... (This entire method is UNCHANGED) ...
         action_dim = action_space.shape[0]
         
         self.state_dim = state_dim
@@ -54,7 +53,6 @@ class Agent(object):
     
 
     def calculate_gae(self, state_batch, next_state_batch, reward_batch, terminated_batch, gamma, lambdaa):
-        # ... (This method is UNCHANGED) ...
         rewards = reward_batch.to(self.device)  # (T,1)
         terminated = terminated_batch.to(self.device)  # (T,1)
         
@@ -92,7 +90,6 @@ class Agent(object):
 
 
     def update_parameters(self, buffer: RolloutBuffer):
-        # ... (This method is UNCHANGED) ...
         state_batch = buffer.states[:buffer.current_size]
         next_state_batch = torch.cat([buffer.states[1:buffer.current_size], buffer.states[buffer.current_size - 1:].clone()])
         action_batch = buffer.actions[:buffer.current_size]
@@ -206,21 +203,11 @@ class Agent(object):
         return actor_loss_avg, critic_loss_avg 
     
 
-    # --- THIS IS THE MODIFIED FUNCTION ---
-    def train(self, env, episodes, summary_writer_name, max_episode_steps, buffer: RolloutBuffer, trial: 'optuna.Trial' = None):
-        
-        # Disable SummaryWriter during Optuna trials to save time and disk space
-        writer = None
-        if trial is None:
-            summary_writer_name = f'runs/{datetime.now().strftime("%Y%m%d-%H%M%S")}-{summary_writer_name}'
-            writer = SummaryWriter(summary_writer_name)
-
+    def train(self, env, episodes, max_episode_steps, buffer: RolloutBuffer, trial: 'optuna.Trial'):
         total_numsteps = 0
         update_count = 0
-        actor_loss = 0
-        critic_loss = 0
         
-        all_episode_rewards = [] # <-- Store rewards for reporting
+        all_episode_rewards = []
 
         reward_scaling = RewardScaling(shape=1, gamma=self.gamma)
         state_norm = Normalization(shape=self.state_dim)
@@ -262,109 +249,30 @@ class Agent(object):
                 state = next_state
 
                 if buffer.current_size == buffer.batch_size:
-                    actor_loss, critic_loss = self.update_parameters(buffer)
+                    self.update_parameters(buffer)
                     update_count += 1
-                    
-                    # BUG FIX: Moved loss logging INSIDE the update block
-                    if writer is not None:
-                        writer.add_scalar('Loss/Actor', actor_loss, update_count)
-                        writer.add_scalar('Loss/Critic', critic_loss, update_count)
-                
-                # Removed the buggy logging lines from here
-
-            # --- End of Episode ---
-            all_episode_rewards.append(true_reward) # Log the original reward
-
-            if writer is not None:
-                writer.add_scalar('Reward/Train', episode_reward, episode)
-                writer.add_scalar('Reward/Original', true_reward, episode)
-            
+                                
             print(f'Episode {episode}, total numsteps: {total_numsteps}, episode steps: {episode_steps}, original reward:{round(true_reward, 2)} scaled reward: {round(episode_reward, 2)}')
+
+            all_episode_rewards.append(true_reward) 
 
             self.lr_decay(episode, episodes)
 
-            # --- Optuna Reporting and Pruning ---
-            if trial is not None:
-                # Report intermediate results every 20 episodes
-                if episode > 0 and episode % 20 == 0:
-                    intermediate_value = np.mean(all_episode_rewards[-20:])
-                    trial.report(intermediate_value, episode)
-                    
-                    # Check if the trial should be pruned
-                    if trial.should_prune():
-                        print(f"Trial {trial.number} pruned at episode {episode}.")
-                        raise optuna.exceptions.TrialPruned()
-
-            # --- Checkpointing (disabled for Optuna trials) ---
-            if trial is None:
-                if episode != 0 and episode % 10 == 0:
-                    self.save_checkpoint()
-        
-        # --- End of Training ---
-        
-        # Close writer if it was created
-        if writer is not None:
-            writer.close()
+            # Report intermediate results every 20 episodes
+            if episode > 0 and episode % 20 == 0:
+                intermediate_value = np.mean(all_episode_rewards[-20:])
+                trial.report(intermediate_value, episode)
+                
+                # Check if the trial should be pruned
+                if trial.should_prune():
+                    print(f"Trial {trial.number} pruned at episode {episode}.")
+                    raise optuna.exceptions.TrialPruned()
 
         # Handle case where no episodes were run
         if not all_episode_rewards:
             return -np.inf
         
-        # Return the final score (average of last 100 episodes) for Optuna
+        # Define the score as average of last 100 episodes and return
         final_avg_reward = np.mean(all_episode_rewards[-100:])
         return final_avg_reward
-    
-    # --- END OF MODIFIED FUNCTION ---
-    
-
-    def test(self, env, episodes=10, max_episode_steps=500):
-        # ... (This method is UNCHANGED) ...
-        for episode in range(episodes):
-            episode_reward = 0
-            episode_steps = 0
-            terminated = False
-
-            state, _ = env.reset()
-
-            while not terminated and episode_steps < max_episode_steps:
-                action = self.select_action(state)
-                next_state, reward, terminated, truncated, _ = env.step(action)
-
-                episode_steps += 1
-
-                episode_reward += reward
-
-                state = next_state
-
-            print(f'Test Episode {episode}, steps: {episode_steps}, reward: {round(episode_reward, 2)}')
-
-    def save_checkpoint(self):
-        # ... (This method is UNCHANGED) ...
-        if not os.path.exists('checkpoints/'):
-            os.makedirs('checkpoints/')
-        
-        print('Saving models')
-
-        self.actor.save_checkpoint()
-        self.critic.save_checkpoint()
-
-
-    def load_checkpoint(self, evaluate=False):
-        # ... (This method is UNCHANGED) ...
-        try:
-            print("Loading checkpoints...")
-            self.actor.load_checkpoint()
-            self.critic.load_checkpoint()
-            print("Checkpoints loaded successfully.")
-        except:
-            if evaluate:
-                raise Exception("No checkpoints found for evaluation.")
-            else:
-                print("No checkpoints found, starting from scratch.")
-        
-        if evaluate:
-            self.actor.eval()
-            self.critic.eval()
-        else:
-            self.actor.train()
-            self.critic.train()
+ 

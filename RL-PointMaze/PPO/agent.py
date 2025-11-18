@@ -271,16 +271,21 @@ class Agent(object):
 
     
     def test(self, env, episodes=10, max_episode_steps=500):
+        state_norm = Normalization(shape=self.state_dim)
+
         for episode in range(episodes):
             episode_reward = 0
             episode_steps = 0
             terminated = False
 
             state, _ = env.reset()
+            state = state_norm(state, update=False)
 
             while not terminated and episode_steps < max_episode_steps:
                 action = self.select_action(state)
+                
                 next_state, reward, terminated, truncated, _ = env.step(action)
+                next_state = state_norm(next_state, update=False)
 
                 episode_steps += 1
 
