@@ -86,6 +86,8 @@ class Agent(object):
 
 
     def update_parameters(self, buffer: RolloutBuffer):
+    # Debugging nan errors
+    # def update_parameters(self, buffer: RolloutBuffer, writer: SummaryWriter, update_count: int):
         state_batch = buffer.states[:buffer.current_size]
         next_state_batch = torch.cat([buffer.states[1:buffer.current_size], buffer.states[buffer.current_size - 1:].clone()])
         action_batch = buffer.actions[:buffer.current_size]
@@ -175,7 +177,15 @@ class Agent(object):
                 with torch.no_grad():
                     td_target = reward_mb + self.gamma * self.critic(next_state_mb).detach() * (1 - terminated_mb)
                 critic_loss = F.mse_loss(self.critic(state_mb), td_target)
-                    
+                
+                # Debugging nan errors
+                # global_step = update_count * self.epochs * (buffer.current_size // buffer.mini_batch_size) + num_mini_batches
+                # writer.add_scalar('Debug/ratio_mean', ratio.mean().item(), global_step)
+                # writer.add_scalar('Debug/log_prob_mean', log_prob.mean().item(), global_step)
+                # writer.add_scalar('Debug/log_prob_old_mean', log_prob_old_mb.mean().item(), global_step)
+                # writer.add_scalar('Debug/gae_mb_mean', gae_mb.mean().item(), global_step)
+                # writer.add_scalar('Debug/actor_loss_mb', actor_loss.item(), global_step)
+
                 self.critic_optim.zero_grad()
                 critic_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5)
@@ -254,6 +264,8 @@ class Agent(object):
 
                 if buffer.current_size == buffer.batch_size:
                     actor_loss, critic_loss = self.update_parameters(buffer)
+                    # Debugging nan errors
+                    # actor_loss, critic_loss = self.update_parameters(buffer, writer, update_count)
                     update_count += 1
 
                     writer.add_scalar('Loss/Actor', actor_loss, update_count)
@@ -271,21 +283,17 @@ class Agent(object):
 
     
     def test(self, env, episodes=10, max_episode_steps=500):
-        state_norm = Normalization(shape=self.state_dim)
-
         for episode in range(episodes):
             episode_reward = 0
             episode_steps = 0
             terminated = False
 
             state, _ = env.reset()
-            state = state_norm(state, update=False)
 
             while not terminated and episode_steps < max_episode_steps:
                 action = self.select_action(state)
                 
                 next_state, reward, terminated, truncated, _ = env.step(action)
-                next_state = state_norm(next_state, update=False)
 
                 episode_steps += 1
 

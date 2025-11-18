@@ -8,6 +8,7 @@ tricks taken:
     Adam Optimizer Epsilon Parameter
 
 
+1.
 runs: 20251005-035602-straight_maze
 hyperparameters:
     episodes = 2000
@@ -23,6 +24,7 @@ hyperparameters:
     batch_size = 1024
     mini_batch_size = 256
 
+2.
 runs: 20251005-055921-straight_maze
 hyperparameters:
     episodes = 5000
@@ -38,9 +40,11 @@ hyperparameters:
     batch_size = 1024
     mini_batch_size = 256
 
+3.
 runs: 20251114-235756-straight_maze
 failed case when learning_rate_ac > learning_rate_cr
 
+4.
 runs: 20251115-051015-straight_maze
 hyperparameters:
 * Optuna Dashboard: ppo-pointmaze-v1
@@ -57,9 +61,11 @@ hyperparameters:
     batch_size = 4096
     mini_batch_size = 512
 
+5.
 runs: 20251116-004418-straight_maze
 hyperparameters:
 * Optuna Dashboard: ppo-pointmaze-v2
+* check point: checkpoints-v2
     episodes = 5000
     gamma = 0.987
     lambdaa = 0.977
@@ -72,8 +78,8 @@ hyperparameters:
     max_episode_steps = 100
     batch_size = 4096
     mini_batch_size = 256
-check point: checkpoints-v2
 
+6.
 runs: 20251116-024338-straight_maze (reward=1)
 hyperparameters:
 * Optuna Dashboard: ppo-pointmaze-v1
@@ -89,4 +95,37 @@ hyperparameters:
     max_episode_steps = 100
     batch_size = 4096
     mini_batch_size = 512
-check point: checkpoints-v1
+
+7.
+runs: 20251118-094731-straight_maze (failed case)
+hyperparameters:
+    episodes = 5000
+    gamma = 0.982
+    lambdaa = 0.958
+    epsilon = 0.12
+    entropy_coef = 0.06
+    epochs = 10
+    hidden_dim = 512
+    learning_rate_ac = 2e-3 (intentionally)
+    learning_rate_cr = 9e-4
+    max_episode_steps = 100
+    batch_size = 4096
+    mini_batch_size = 512
+
+8.
+runs: 20251118-101136-straight_maze (reward=1)
+hyperparameters:
+* Optuna Dashboard: ppo-pointmaze-v1
+* check point: checkpoints-v1
+    episodes = 5000
+    gamma = 0.982
+    lambdaa = 0.958
+    epsilon = 0.12
+    entropy_coef = 0.06
+    epochs = 10
+    hidden_dim = 512
+    learning_rate_ac = 2e-4
+    learning_rate_cr = 9e-4
+    max_episode_steps = 100
+    batch_size = 4096
+    mini_batch_size = 512
