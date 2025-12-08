@@ -11,7 +11,7 @@ from herbuffer import HERReplayBuffer
 if __name__ == "__main__":
 
     replay_buffer_size = 1000000
-    episodes = 10
+    episodes = 10000
     batch_size = 256
     update_per_state = 1
     gamma = 0.98
@@ -19,11 +19,11 @@ if __name__ == "__main__":
     alpha = 0.2
     target_update_interval = 1
     hidden_dim = 256
-    learning_rate = 1e-3
+    learning_rate = 3e-4
     max_episode_steps = 50
     
     gym.register_envs(gymnasium_robotics)
-    env = gym.make('FetchPickAndPlace-v4', max_episode_steps=max_episode_steps, render_mode='human')
+    env = gym.make('FetchPickAndPlace-v4', max_episode_steps=max_episode_steps)
     env = DataWrapper(env)
 
     observation_dict, info = env.reset()
@@ -49,10 +49,13 @@ if __name__ == "__main__":
         reward_fn=DataWrapper.compute_reward
     )
 
-
-    agent.load_checkpoint(evaluate=True)
-
-    agent.test(env, episodes=episodes, max_episode_steps=max_episode_steps)
+    agent.train(env,
+                memory=memory,
+                episodes=episodes,
+                batch_size=batch_size,
+                updates_per_step=update_per_state,
+                summary_writer_name=f'straight_maze',
+                max_episode_steps=max_episode_steps)
 
     env.close()
     

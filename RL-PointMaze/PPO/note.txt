@@ -73,8 +73,8 @@ hyperparameters:
     entropy_coef = 0.003
     epochs = 9
     hidden_dim = 512
-    learning_rate_ac = 7e-5
-    learning_rate_cr = 1e-4
+    learning_rate_ac = 1e-4
+    learning_rate_cr = 7e-5
     max_episode_steps = 100
     batch_size = 4096
     mini_batch_size = 256
