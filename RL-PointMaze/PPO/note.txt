@@ -1,0 +1,131 @@
+tricks taken:
+    Advantage Normalization
+    state Normalization
+    Reward Scaling
+    Policy Entropy
+    Learning Rate Decay
+    Gradient clip
+    Adam Optimizer Epsilon Parameter
+
+
+1.
+runs: 20251005-035602-straight_maze
+hyperparameters:
+    episodes = 2000
+    gamma = 0.99
+    lambdaa = 0.95
+    epsilon = 0.2
+    entropy_coef = 0.02
+    epochs = 4
+    hidden_dim = 512
+    learning_rate_ac = 1e-4
+    learning_rate_cr = 3e-4
+    max_episode_steps = 100
+    batch_size = 1024
+    mini_batch_size = 256
+
+2.
+runs: 20251005-055921-straight_maze
+hyperparameters:
+    episodes = 5000
+    gamma = 0.99
+    lambdaa = 0.95
+    epsilon = 0.2
+    entropy_coef = 0.02
+    epochs = 4
+    hidden_dim = 512
+    learning_rate_ac = 1e-4
+    learning_rate_cr = 3e-4
+    max_episode_steps = 100
+    batch_size = 1024
+    mini_batch_size = 256
+
+3.
+runs: 20251114-235756-straight_maze
+failed case when learning_rate_ac > learning_rate_cr
+
+4.
+runs: 20251115-051015-straight_maze
+hyperparameters:
+* Optuna Dashboard: ppo-pointmaze-v1
+    episodes = 5000
+    gamma = 0.982
+    lambdaa = 0.958
+    epsilon = 0.12
+    entropy_coef = 0.06
+    epochs = 10
+    hidden_dim = 512
+    learning_rate_ac = 2e-4
+    learning_rate_cr = 9e-4
+    max_episode_steps = 100
+    batch_size = 4096
+    mini_batch_size = 512
+
+5.
+runs: 20251116-004418-straight_maze
+hyperparameters:
+* Optuna Dashboard: ppo-pointmaze-v2
+* check point: checkpoints-v2
+    episodes = 5000
+    gamma = 0.987
+    lambdaa = 0.977
+    epsilon = 0.188
+    entropy_coef = 0.003
+    epochs = 9
+    hidden_dim = 512
+    learning_rate_ac = 1e-4
+    learning_rate_cr = 7e-5
+    max_episode_steps = 100
+    batch_size = 4096
+    mini_batch_size = 256
+
+6.
+runs: 20251116-024338-straight_maze (reward=1)
+hyperparameters:
+* Optuna Dashboard: ppo-pointmaze-v1
+    episodes = 5000
+    gamma = 0.982
+    lambdaa = 0.958
+    epsilon = 0.12
+    entropy_coef = 0.06
+    epochs = 10
+    hidden_dim = 512
+    learning_rate_ac = 2e-4
+    learning_rate_cr = 9e-4
+    max_episode_steps = 100
+    batch_size = 4096
+    mini_batch_size = 512
+
+7.
+runs: 20251118-094731-straight_maze (failed case)
+hyperparameters:
+    episodes = 5000
+    gamma = 0.982
+    lambdaa = 0.958
+    epsilon = 0.12
+    entropy_coef = 0.06
+    epochs = 10
+    hidden_dim = 512
+    learning_rate_ac = 2e-3 (intentionally)
+    learning_rate_cr = 9e-4
+    max_episode_steps = 100
+    batch_size = 4096
+    mini_batch_size = 512
+
+8.
+runs: 20251118-101136-straight_maze (reward=1)
+hyperparameters:
+* Optuna Dashboard: ppo-pointmaze-v1
+* check point: checkpoints-v1
+    episodes = 5000
+    gamma = 0.982
+    lambdaa = 0.958
+    epsilon = 0.12
+    entropy_coef = 0.06
+    epochs = 10
+    hidden_dim = 512
+    learning_rate_ac = 2e-4
+    learning_rate_cr = 9e-4
+    max_episode_steps = 100
+    batch_size = 4096
+    mini_batch_size = 512
